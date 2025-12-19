@@ -649,11 +649,11 @@ class MicMonitor(FigureCanvas):
     def __init__(self, controller, plot_interval_ms=30):
         # microphone monitor
         self.controller = controller
+        self.is_recording = False  # Initialize before FuncAnimation which calls update_mic_monitor
         self.fig, self.ax, self.lines, self.data = self.prepare_monitor_fig()
         FigureCanvas.__init__(self, self.fig)  # a Gtk.DrawingArea
         self.set_size_request(100, 50)
-        self.monitor_animation = FuncAnimation(self.fig, self.update_mic_monitor, interval=plot_interval_ms, blit=True)
-        self.is_recording = False
+        self.monitor_animation = FuncAnimation(self.fig, self.update_mic_monitor, interval=plot_interval_ms, blit=True, cache_frame_data=False)
         self.controller.signal_sender.connect('recording_state_changed', self.change_recording_state)
 
     def prepare_monitor_fig(self):
@@ -669,7 +669,14 @@ class MicMonitor(FigureCanvas):
         ax.yaxis.grid(True)
         fig.tight_layout(pad=-5)
         ax.axis('off')
-        fig.canvas.set_window_title('Epic Narrator Monitor')
+        # Try to set window title (not supported on all backends)
+        try:
+            if hasattr(fig.canvas, 'set_window_title'):
+                fig.canvas.set_window_title('Epic Narrator Monitor')
+            elif hasattr(fig.canvas, 'manager') and hasattr(fig.canvas.manager, 'set_window_title'):
+                fig.canvas.manager.set_window_title('Epic Narrator Monitor')
+        except (AttributeError, Exception):
+            pass  # Window title setting not critical, continue without it
 
         return fig, ax, lines, data
 
